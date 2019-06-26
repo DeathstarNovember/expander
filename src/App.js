@@ -2,6 +2,8 @@ import React, {useReducer} from 'react';
 import './App.css';
 import styled from 'styled-components';
 
+const clicksToSolve = 2;
+
 const MainGrid = styled.div`
   display: grid;
   height: 100vh;
@@ -14,7 +16,17 @@ const MainGrid = styled.div`
 const Cell = styled.div`
   height: 1fr;
   width: 1fr;
-  background-color: ${props => props.cell.lit ? "#ff0" : "#000"};
+  background-color: ${props => {
+    if(props.cell.clicks % (clicksToSolve + 1) === 0) {
+      return ("#000");
+    }
+    if((props.cell.clicks - 1) % (clicksToSolve + 1) === 0) {
+      return ("#ff0");
+    }
+    if((props.cell.clicks - 2) % (clicksToSolve + 1) === 0) {
+      return ("#f0f");
+    }
+  }};
   border-radius: 5px;
 `;
 
@@ -22,32 +34,29 @@ const Cell = styled.div`
 const reducer = (state, {type, payload}) => {
   let columns = state.columns;
   let rows = state.rows;
+
   switch (type) {
     case "handleCellClick":
-      console.warn("payload", payload);
-      let clickedCell = state.cells.find(cell => cell.id === payload);
-      console.warn("clickedCell", clickedCell);
+      let {position, id} = payload;
       let cellsToFlip = []
-      cellsToFlip.push(clickedCell.id)
-      if(clickedCell.position.column !== columns - 1) {
-        cellsToFlip.push(payload + 1)
+      cellsToFlip.push(id)
+      if(position.column !== columns - 1) {
+        cellsToFlip.push(id + 1)
       }
-      if(clickedCell.position.column !== 0) {
-        cellsToFlip.push(payload - 1)
+      if(position.column !== 0) {
+        cellsToFlip.push(id - 1)
       }
-      if(clickedCell.position.row !== rows - 1) {
-        cellsToFlip.push(payload + columns)
+      if(position.row !== rows - 1) {
+        cellsToFlip.push(id + columns)
       }
-      if(clickedCell.position.row !== 0 ) {
-        cellsToFlip.push(payload - columns)
+      if(position.row !== 0 ) {
+        cellsToFlip.push(id - columns)
       }
-      console.warn("cellsToFlip", cellsToFlip);
       let newCells = [
         ...state.cells.filter(cell => !cellsToFlip.includes(cell.id)),
         ...state.cells.filter(cell => cellsToFlip.includes(cell.id))
-        .map(cell => ({...cell, lit: !cell.lit})),
+        .map(cell => ({...cell, clicks: cell.clicks + 1 })),
        ].sort((a, b) => a.id - b.id)
-       console.warn("newCells", newCells);
        return {...state, cells: newCells};
     default:
       return state;
@@ -60,6 +69,7 @@ const initialState = () => {
   let columns = 10;
   let rows = 10;
   let cells = [];
+  let numberLit = 25;
   
   const shuffle = (array) => {
     let currentIndex = array.length, temporaryValue, randomIndex;
@@ -72,8 +82,8 @@ const initialState = () => {
     }
     return array;
   }
-  let numberLit = 25;
   let litCells = shuffle([...Array((rows * columns)).keys()]).slice(0, numberLit);
+  
   let rowCount;
   for(rowCount = 0; rowCount < rows; rowCount++) {
     let columnCount;
@@ -82,7 +92,7 @@ const initialState = () => {
         {
           id: (rowCount * columns + columnCount) , 
           position: {column: columnCount, row:rowCount},
-          lit: litCells.includes(rowCount * columns + columnCount),
+          clicks: litCells.includes(rowCount * columns + columnCount) ? 1 : 0,
         }
       );
     }
@@ -100,14 +110,10 @@ const App = () => {
     rows,
     cells,
   }, dispatch] = useReducer(reducer, initialState());
-  console.warn(columns, rows, cells);
-  const handleClick = (cellId) => {
-    dispatch({type: "handleCellClick", payload: cellId})
-  }
   return(
     <MainGrid columns={columns} rows={rows} >
       {cells.map(cell => (
-        <Cell key={cell.id} cell={cell} onClick={() => handleClick(cell.id)} />
+        <Cell key={cell.id} cell={cell} onClick={() => dispatch({type: "handleCellClick", payload: cell})} />
       ))}
     </MainGrid>
   );
