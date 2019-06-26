@@ -2,12 +2,13 @@ import React, {useReducer} from 'react';
 import './App.css';
 import styled from 'styled-components';
 
-const clicksToSolve = 2;
+const clicksToSolve = 3;
 
 const MainGrid = styled.div`
+  padding: 20px;
   display: grid;
-  height: 100vh;
-  width: 100vw;
+  height: calc(100vh - 100px);
+  width: calc(100vw - 40px);
   gap: 3px;
   grid-template-columns: repeat(${props => props.columns}, 1fr);
   grid-template-rows: repeat(${props => props.rows}, 1fr);
@@ -16,15 +17,20 @@ const MainGrid = styled.div`
 const Cell = styled.div`
   height: 1fr;
   width: 1fr;
-  background-color: ${props => {
+  box-shadow: 0 0 20px rgba(0,0,0,0.9);
+  background: ${props => {
     if(props.cell.clicks % (clicksToSolve + 1) === 0) {
-      return ("#000");
+      return (
+      "linear-gradient(to bottom, #434343, #000000)");
     }
     if((props.cell.clicks - 1) % (clicksToSolve + 1) === 0) {
-      return ("#ff0");
+      return ("linear-gradient(to top, #fffc00, #fff)");
     }
     if((props.cell.clicks - 2) % (clicksToSolve + 1) === 0) {
-      return ("#f0f");
+      return ("linear-gradient(to bottom, #fc6767, #ec008c)");
+    }
+    if((props.cell.clicks - 3) % (clicksToSolve + 1) === 0) {
+      return ("linear-gradient(to bottom, #56ccf2, #2f80ed)");
     }
   }};
   border-radius: 5px;
@@ -66,10 +72,10 @@ const reducer = (state, {type, payload}) => {
 
 
 const initialState = () => {
-  let columns = 10;
-  let rows = 10;
+  let columns = 6;
+  let rows = 6;
   let cells = [];
-  let numberLit = 25;
+  let numberLit = 15;
   
   const shuffle = (array) => {
     let currentIndex = array.length, temporaryValue, randomIndex;
@@ -111,11 +117,14 @@ const App = () => {
     cells,
   }, dispatch] = useReducer(reducer, initialState());
   return(
-    <MainGrid columns={columns} rows={rows} >
-      {cells.map(cell => (
-        <Cell key={cell.id} cell={cell} onClick={() => dispatch({type: "handleCellClick", payload: cell})} />
-      ))}
-    </MainGrid>
+    <>
+      <MainGrid columns={columns} rows={rows} >
+        {cells.map(cell => (
+          <Cell key={cell.id} cell={cell} onClick={() => dispatch({type: "handleCellClick", payload: cell})} />
+        ))}
+      </MainGrid>
+      
+    </>
   );
 }
 
