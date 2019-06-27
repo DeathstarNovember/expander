@@ -10,8 +10,8 @@ const MainGrid = styled.div`
   height: calc(100vh - 100px);
   width: calc(100vw - 40px);
   gap: 3px;
-  grid-template-columns: repeat(${props => props.columns}, 1fr);
-  grid-template-rows: repeat(${props => props.rows}, 1fr);
+  grid-template-columns: repeat(${props => props.numberOfColumns}, 1fr);
+  grid-template-rows: repeat(${props => props.numberOfRows}, 1fr);
 `;
 
 const Cell = styled.div`
@@ -71,11 +71,14 @@ const reducer = (state, {type, payload}) => {
 
 
 
+
+
 const initialState = () => {
-  let columns = 6;
-  let rows = 6;
+  let numberOfColumns = 10;
+  let numberOfRows = 10;
   let cells = [];
-  let numberLit = 15;
+  // let cells = [...Array((numberOfRows * numberOfColumns)).keys()];
+  let numberLit = 25;
   
   const shuffle = (array) => {
     let currentIndex = array.length, temporaryValue, randomIndex;
@@ -86,39 +89,113 @@ const initialState = () => {
       array[currentIndex] = array[randomIndex];
       array[randomIndex] = temporaryValue;
     }
+
     return array;
   }
-  let litCells = shuffle([...Array((rows * columns)).keys()]).slice(0, numberLit);
-  
-  let rowCount;
-  for(rowCount = 0; rowCount < rows; rowCount++) {
-    let columnCount;
-    for(columnCount = 0; columnCount < columns; columnCount++) {
-      cells.push(
-        {
-          id: (rowCount * columns + columnCount) , 
-          position: {column: columnCount, row:rowCount},
-          clicks: litCells.includes(rowCount * columns + columnCount) ? 1 : 0,
+  let positionsArray = [...Array((numberOfRows * numberOfColumns)).keys()]
+  let litCells = shuffle([...positionsArray]).slice(0, numberLit);
+  let boardLightMap = positionsArray.map(position => (
+    litCells.includes(position) ? 1 : 0
+    ));
+  const gauss = (lightMap) => {
+    let n = lightMap.length;
+
+    for (let i=0; i<n; i++) {
+        // Search for maximum in this column
+        let maxEl = Math.abs(lightMap[i][i]);
+        let maxRow = i;
+        for(let k=i+1; k<n; k++) {
+            if (Math.abs(lightMap[k][i]) > maxEl) {
+                maxEl = Math.abs(lightMap[k][i]);
+                maxRow = k;
+            }
         }
-      );
+
+        // Swap maximum row with current row (column by column)
+        for (let k=i; k<n+1; k++) {
+            let tmp = lightMap[maxRow][k];
+            lightMap[maxRow][k] = lightMap[i][k];
+            lightMap[i][k] = tmp;
+        }
+
+        // Make all rows below this one 0 in current column
+        for (k=i+1; k<n; k++) {
+            let c = -lightMap[k][i]/lightMap[i][i];
+            for(let j=i; j<n+1; j++) {
+                if (i==j) {
+                    lightMap[k][j] = 0;
+                } else {
+                    lightMap[k][j] += c * lightMap[i][j];
+                }
+            }
+        }
     }
-  }
-  return({
-    columns: columns, 
-    rows: rows, 
-    cells: cells,
-  });
+
+    // Solve equation Ax=b for an upper triangular matrix A
+    let x= new Array(n);
+    for (let i=n-1; i>-1; i--) {
+        x[i] = lightMap[i][n]/lightMap[i][i];
+        for (let k=i-1; k>-1; k--) {
+            lightMap[k][n] -= lightMap[k][i] * x[i];
+        }
+    }
+    return x;
+}
+gauss(boardLightMap);
+  // const litCellsAreValid = () => {
+  //   let positionArray = [...Array((numberOfRows * numberOfColumns)).keys()];
+  //   let boardMap = positionArray.map(position => litCells.includes(position) ? 1 : 0);
+  //   let i;
+  //   // check Rows
+  //   for(i=0; i < boardMap.length; i += numberOfColumns) {
+  //     let row = boardMap.slice(i, i + numberOfColumns + 1);
+  //     // if the total number of lights in the row is not even, this board is invalid
+  //     if (row.reduce((a,b) => a + b, 0) % 2 !== 0) {
+  //       return false;
+  //     }
+  //   }
+  //   //check columns
+  //   for(i=Number(numberOfColumns); i > 0; i--) {
+  //     let column = boardMap.filter((_on, index) => index % (numberOfColumns - i))
+  //     if (column.reduce((a,b) => a + b, 0) % 2 !== 0) {
+  //       return false;
+  //     }
+  //   }
+  //   return true;
+  // }
+  // if (litCellsAreValid()) {
+    let rowCount;
+    for(rowCount = 0; rowCount < numberOfRows; rowCount++) {
+      let columnCount;
+      for(columnCount = 0; columnCount < numberOfColumns; columnCount++) {
+        cells.push(
+          {
+            id: (rowCount * numberOfColumns + columnCount) , 
+            position: {column: columnCount, row:rowCount},
+            clicks: litCells.includes(rowCount * numberOfColumns + columnCount) ? 1 : 0,
+          }
+        );
+      }
+    }
+    return({
+      numberOfColumns: numberOfColumns, 
+      numberOfRows: numberOfRows, 
+      cells: cells,
+    });
+  // } else {
+  //   initialState();
+  // }
 };
 
 const App = () => {
   const [{
-    columns, 
-    rows,
+    numberOfColumns, 
+    numberOfRows,
     cells,
   }, dispatch] = useReducer(reducer, initialState());
   return(
     <>
-      <MainGrid columns={columns} rows={rows} >
+      <MainGrid numberOfColumns={numberOfColumns} numberOfRows={numberOfRows} >
         {cells.map(cell => (
           <Cell key={cell.id} cell={cell} onClick={() => dispatch({type: "handleCellClick", payload: cell})} />
         ))}
