@@ -1,123 +1,16 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import styled from "styled-components";
-//@ts-ignore
-import Toggle from "react-styled-toggle";
-
-type ModMode = 2 | 4;
-const Text = styled.div`
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-`;
-
-type ButtonProps = {
-  bg?: string;
-};
-const Button = styled.button<ButtonProps>`
-  background: ${(props) => props.bg}
-  padding: 12px;
-  font-size: 1.5rem;
-  border-radius: 5px;
-  margin: 0 5px;
-`;
-
-const ButtonGroup = styled.div`
-  margin: 15px;
-`;
-const ToggleGroup = styled.div`
-  display: flex;
-  align-items: center;
-  margin: 15px;
-`;
-
-type LayoutProps = {};
-
-const Layout = styled.div<LayoutProps>`
-  display: grid;
-  grid-template-columns: 1fr 3fr;
-  height: 100vh;
-  width: 100vw;
-  background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.15) 0%,
-      rgba(0, 0, 0, 0.15) 100%
-    ),
-    radial-gradient(
-        at top center,
-        rgba(255, 255, 255, 0.4) 0%,
-        rgba(0, 0, 0, 0.4) 120%
-      )
-      #989898;
-  background-blend-mode: multiply, multiply;
-`;
-
-type ControlPanelProps = {};
-
-const ControlPanel = styled.div<ControlPanelProps>`
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
-  padding: 20px;
-  margin: 20px;
-  border: 2px solid darkblue;
-  border-radius: 5px;
-  background: violet;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
-  background-color: #e4e4e1;
-  background-image: radial-gradient(
-      at top center,
-      rgba(255, 255, 255, 0.03) 0%,
-      rgba(0, 0, 0, 0.03) 100%
-    ),
-    linear-gradient(
-      to top,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(143, 152, 157, 0.6) 100%
-    );
-  background-blend-mode: normal, multiply;
-`;
-
-type StatsPaneProps = {};
-
-const StatsPane = styled.div<StatsPaneProps>``;
-
-type MainGridProps = {
-  size: number;
-};
-const MainGrid = styled.div<MainGridProps>`
-  padding: 20px;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(${(props) => props.size}, 1fr);
-`;
-type Cell = {
-  id: number;
-  position: { column: number; row: number };
-  clicks: number;
-  flips: number;
-  solution: number;
-};
-const Cell = styled.div<{ cell: Cell; mod: 2 | 4 }>`
-  height: 1fr;
-  width: 1fr;
-  ${(props) => {
-    const timesFlipped = props.cell.flips;
-    if ((timesFlipped - 0) % props.mod === 0) {
-      return "box-shadow: 0 0 10px rgba(0, 0, 0, 0.9); background: linear-gradient(to bottom, #434343, #000000); ";
-    }
-    if ((timesFlipped - 1) % props.mod === 0) {
-      return "box-shadow: 0 0 10px rgba(255, 252, 0, 0.7); background: linear-gradient(to top, #fffc00, #fff); ";
-    }
-    if ((timesFlipped - 2) % props.mod === 0) {
-      return "box-shadow: 0 0 10px rgba(236, 0, 140, 0.7); background: linear-gradient(to bottom, #fc6767, #ec008c); ";
-    }
-    if ((timesFlipped - 3) % props.mod === 0) {
-      return "box-shadow: 0 0 10px rgba(47, 128, 237, 0.7); background: linear-gradient(to bottom, #56ccf2, #2f80ed); ";
-    }
-  }}
-  border-radius: 5px;
-`;
+import {
+  ModMode,
+  Cell,
+  Layout,
+  ControlPanel,
+  StatsPane,
+  ButtonGroup,
+  Button,
+  MainGrid,
+  Text,
+} from "./styledComponents";
 
 const getPosition = (id: number, rowSize: number) => {
   const row = Math.floor(id / rowSize);
@@ -174,6 +67,7 @@ const flipCell = (
   };
   const row = Math.floor(id / boardSize);
   const column = id % boardSize;
+
   let cellIdsToFlip: number[] = [];
   cellIdsToFlip.push(id);
   if (column !== boardSize - 1) {
@@ -201,16 +95,19 @@ const flipCell = (
   });
   return newCells;
 };
+
+const getOccurrence = (array: number[], value: number) => {
+  let count = 0;
+  array.forEach((v) => v === value && count++);
+  return count;
+};
+
 const getInitialCells = (solution: number[], boardSize: number) => {
   let initialCells = [...getBlankBoard(boardSize)];
   solution.forEach((cell, _solutionCellIndex) => {
     initialCells = flipCell(initialCells[cell], initialCells, boardSize);
   });
-  const getOccurrence = (array: number[], value: number) => {
-    let count = 0;
-    array.forEach((v) => v === value && count++);
-    return count;
-  };
+
   return initialCells.map((cell, cellIndex) => {
     return { ...cell, solution: getOccurrence(solution, cellIndex) };
   });
@@ -270,34 +167,34 @@ const App = () => {
     const cellCount = boardSize * boardSize;
     const solutionSize = Math.floor(cellCount * boardDensity);
     const solution: number[] = getSolution(solutionSize, cellCount, modMode);
+    setMinimumSolutionSize(solution.length);
     const newCells = getInitialCells(solution, boardSize);
+    const minimumSolutionSize = newCells
+      .map((cell) => (modMode - cell.clicks) % modMode)
+      .reduce((acc, clicks) => clicks + acc);
     setCells(newCells);
     setStartingBoard(newCells);
-    setMinimumSolutionSize(solutionSize);
+    setMinimumSolutionSize(minimumSolutionSize);
   }, [modMode, boardSize, boardDensity, reset]);
   return (
     <Layout>
       <ControlPanel>
         <StatsPane>
-          <Text>Minimum clicks to solve: {minimumSolutionSize}</Text>
-          <Text>Your clicks: {userClicks}</Text>
+          <Text size={2}>Minimum clicks to solve: {minimumSolutionSize}</Text>
+          <Text size={2}>Your clicks: {userClicks}</Text>
         </StatsPane>
 
-        <ToggleGroup>
-          <Toggle
-            labelLeft="Mode"
-            backgroundColorChecked="papayawhip"
-            backgroundColorUnchecked="aquamarine"
-            onChange={toggleModMode}
-          />
-          <Toggle
-            labelLeft="Hints"
-            backgroundColorChecked="papayawhip"
-            backgroundColorUnchecked="aquamarine"
-            onChange={toggleHints}
-          />
-        </ToggleGroup>
         <ButtonGroup>
+          <Text>Settings:</Text>
+          <Button bg="lightgreen" onClick={toggleModMode}>
+            Mode
+          </Button>
+          <Button bg="lightgreen" onClick={toggleHints}>
+            Hints
+          </Button>
+        </ButtonGroup>
+        <ButtonGroup>
+          <Text>Start Over:</Text>
           <Button bg="gray" onClick={resetBoard}>
             Reset
           </Button>
