@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import styled from "styled-components";
+//@ts-ignore
+import Toggle from "react-styled-toggle";
 
 type ModMode = 2 | 4;
 const Text = styled.div`
@@ -16,12 +18,69 @@ const Button = styled.button<ButtonProps>`
   background: ${(props) => props.bg}
   padding: 12px;
   font-size: 1.5rem;
+  border-radius: 5px;
+  margin: 0 5px;
 `;
 
 const ButtonGroup = styled.div`
   margin: 15px;
-  display: flex;
 `;
+const ToggleGroup = styled.div`
+  display: flex;
+  align-items: center;
+  margin: 15px;
+`;
+
+type LayoutProps = {};
+
+const Layout = styled.div<LayoutProps>`
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(0, 0, 0, 0.15) 100%
+    ),
+    radial-gradient(
+        at top center,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(0, 0, 0, 0.4) 120%
+      )
+      #989898;
+  background-blend-mode: multiply, multiply;
+`;
+
+type ControlPanelProps = {};
+
+const ControlPanel = styled.div<ControlPanelProps>`
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  padding: 20px;
+  margin: 20px;
+  border: 2px solid darkblue;
+  border-radius: 5px;
+  background: violet;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
+  background-color: #e4e4e1;
+  background-image: radial-gradient(
+      at top center,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(0, 0, 0, 0.03) 100%
+    ),
+    linear-gradient(
+      to top,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(143, 152, 157, 0.6) 100%
+    );
+  background-blend-mode: normal, multiply;
+`;
+
+type StatsPaneProps = {};
+
+const StatsPane = styled.div<StatsPaneProps>``;
 
 type MainGridProps = {
   size: number;
@@ -29,36 +88,34 @@ type MainGridProps = {
 const MainGrid = styled.div<MainGridProps>`
   padding: 20px;
   display: grid;
-  height: calc(100vh - 100px);
-  width: calc(100vw - 40px);
-  gap: 3px;
+  gap: 10px;
   grid-template-columns: repeat(${(props) => props.size}, 1fr);
 `;
 type Cell = {
   id: number;
   position: { column: number; row: number };
   clicks: number;
+  flips: number;
   solution: number;
 };
 const Cell = styled.div<{ cell: Cell; mod: 2 | 4 }>`
   height: 1fr;
   width: 1fr;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
-  background: ${(props) => {
-    const timesClicked = props.cell.clicks;
-    if ((timesClicked - 0) % props.mod === 0) {
-      return "linear-gradient(to bottom, #434343, #000000)";
+  ${(props) => {
+    const timesFlipped = props.cell.flips;
+    if ((timesFlipped - 0) % props.mod === 0) {
+      return "box-shadow: 0 0 10px rgba(0, 0, 0, 0.9); background: linear-gradient(to bottom, #434343, #000000); ";
     }
-    if ((timesClicked - 1) % props.mod === 0) {
-      return "linear-gradient(to top, #fffc00, #fff)";
+    if ((timesFlipped - 1) % props.mod === 0) {
+      return "box-shadow: 0 0 10px rgba(255, 252, 0, 0.7); background: linear-gradient(to top, #fffc00, #fff); ";
     }
-    if ((timesClicked - 2) % props.mod === 0) {
-      return "linear-gradient(to bottom, #fc6767, #ec008c)";
+    if ((timesFlipped - 2) % props.mod === 0) {
+      return "box-shadow: 0 0 10px rgba(236, 0, 140, 0.7); background: linear-gradient(to bottom, #fc6767, #ec008c); ";
     }
-    if ((timesClicked - 3) % props.mod === 0) {
-      return "linear-gradient(to bottom, #56ccf2, #2f80ed)";
+    if ((timesFlipped - 3) % props.mod === 0) {
+      return "box-shadow: 0 0 10px rgba(47, 128, 237, 0.7); background: linear-gradient(to bottom, #56ccf2, #2f80ed); ";
     }
-  }};
+  }}
   border-radius: 5px;
 `;
 
@@ -69,12 +126,12 @@ const getPosition = (id: number, rowSize: number) => {
 };
 
 const getSolution = (
-  clicksToSolve: number,
+  solutionSize: number,
   cellCount: number,
   modMode: ModMode
 ) => {
   let solution: number[] = [];
-  while (solution.length < clicksToSolve) {
+  while (solution.length < solutionSize) {
     const randomPosition = Math.floor(Math.random() * cellCount);
     if (!solution.includes(randomPosition)) {
       solution.push(randomPosition);
@@ -93,13 +150,14 @@ const getBlankBoard = (boardSize: number) => {
     return {
       id: ci,
       position: getPosition(ci, boardSize),
+      flips: 0,
       clicks: 0,
       solution: 0,
     };
   });
 };
 
-const clickCell = (
+const flipCell = (
   cell: Cell,
   cells: Cell[],
   boardSize: number,
@@ -132,21 +190,21 @@ const clickCell = (
   }
   const newCells = cells.map((cell, cellId) => {
     if (cellIdsToFlip.includes(cellId)) {
-      return { ...cell, clicks: cell.clicks + times };
+      return {
+        ...cell,
+        flips: cell.flips + times,
+        clicks: cell.id === id ? cell.clicks + 1 : cell.clicks,
+      };
     } else {
       return cell;
     }
   });
   return newCells;
 };
-const getInitialCells = (
-  solution: number[],
-  boardSize: number,
-  modMode: ModMode
-) => {
+const getInitialCells = (solution: number[], boardSize: number) => {
   let initialCells = [...getBlankBoard(boardSize)];
   solution.forEach((cell, _solutionCellIndex) => {
-    initialCells = clickCell(initialCells[cell], initialCells, boardSize);
+    initialCells = flipCell(initialCells[cell], initialCells, boardSize);
   });
   const getOccurrence = (array: number[], value: number) => {
     let count = 0;
@@ -164,9 +222,19 @@ const App = () => {
   const [boardSize, setBoardSize] = useState(5);
   const [boardDensity, setBoardDensity] = useState(0.4);
   const [cells, setCells] = useState<Cell[]>(getBlankBoard(boardSize));
+  const [startingBoard, setStartingBoard] = useState<Cell[]>(cells);
+  const [userClicks, setUserClicks] = useState(0);
+  const [minimumSolutionSize, setMinimumSolutionSize] = useState(0);
+  const [reset, pushReset] = useState(false);
 
   const toggleHints = () => {
     setHintsVisible(!hintsVisible);
+  };
+  const resetBoard = () => {
+    setCells(startingBoard);
+  };
+  const getNewGame = () => {
+    pushReset(!reset);
   };
   const toggleModMode = () => {
     setModMode(modMode === 2 ? 4 : 2);
@@ -192,56 +260,47 @@ const App = () => {
     }
   };
   const handleCellClick = (cell: Cell) => {
-    const newCells = clickCell(cell, cells, boardSize);
+    const newCells = flipCell(cell, cells, boardSize);
     setCells(newCells);
+    setUserClicks(userClicks + 1);
   };
   useEffect(() => {
     const cellCount = boardSize * boardSize;
-    const clicksToSolve = Math.floor(cellCount * boardDensity);
-    const solution: number[] = getSolution(clicksToSolve, cellCount, modMode);
-    const newCells = getInitialCells(solution, boardSize, modMode);
+    const solutionSize = Math.floor(cellCount * boardDensity);
+    const solution: number[] = getSolution(solutionSize, cellCount, modMode);
+    const newCells = getInitialCells(solution, boardSize);
     setCells(newCells);
-  }, [modMode, boardSize, boardDensity]);
+    setStartingBoard(newCells);
+    setMinimumSolutionSize(solutionSize);
+  }, [modMode, boardSize, boardDensity, reset]);
   return (
-    <>
-      <MainGrid size={boardSize}>
-        {cells.map((cell) => (
-          <Cell
-            key={cell.id}
-            cell={cell}
-            mod={modMode}
-            style={{ fontSize: "3rem" }}
-            onClick={() => handleCellClick(cell)}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              {/* <div>{cell.clicks % mod}</div> */}
-              {hintsVisible ? (
-                <div>
-                  {modMode === 4 && cell.solution !== 0
-                    ? 4 - cell.solution
-                    : cell.solution}
-                </div>
-              ) : null}
-            </div>
-          </Cell>
-        ))}
-      </MainGrid>
-      <div style={{ display: "grid", columns: "1fr 1fr 1fr" }}>
+    <Layout>
+      <ControlPanel>
+        <StatsPane>
+          <Text>Minimum clicks to solve: {minimumSolutionSize}</Text>
+          <Text>Your clicks: {userClicks}</Text>
+        </StatsPane>
+
+        <ToggleGroup>
+          <Toggle
+            labelLeft="Mode"
+            backgroundColorChecked="papayawhip"
+            backgroundColorUnchecked="aquamarine"
+            onChange={toggleModMode}
+          />
+          <Toggle
+            labelLeft="Hints"
+            backgroundColorChecked="papayawhip"
+            backgroundColorUnchecked="aquamarine"
+            onChange={toggleHints}
+          />
+        </ToggleGroup>
         <ButtonGroup>
-          <Button
-            bg={modMode === 2 ? "lightgreen" : "orange"}
-            onClick={toggleModMode}
-          >
-            {modMode === 2 ? "Easy Mode" : "Hard Mode"}
+          <Button bg="gray" onClick={resetBoard}>
+            Reset
           </Button>
-          <Button bg="lightgray" onClick={toggleHints}>
-            Hints
+          <Button bg="gray" onClick={getNewGame}>
+            NewGame
           </Button>
         </ButtonGroup>
         <ButtonGroup>
@@ -262,8 +321,34 @@ const App = () => {
             Decrease
           </Button>
         </ButtonGroup>
-      </div>
-    </>
+      </ControlPanel>
+      <MainGrid size={boardSize}>
+        {cells.map((cell) => {
+          return (
+            <Cell
+              key={cell.id}
+              cell={cell}
+              mod={modMode}
+              style={{ fontSize: "3rem" }}
+              onClick={() => handleCellClick(cell)}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                {/* <div>{cell.clicks % mod}</div> */}
+                {hintsVisible ? (
+                  <div>{(modMode - cell.clicks) % modMode}</div>
+                ) : null}
+              </div>
+            </Cell>
+          );
+        })}
+      </MainGrid>
+    </Layout>
   );
 };
 
