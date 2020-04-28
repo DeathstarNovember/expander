@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import styled from "styled-components";
 
+type ModMode = 2 | 4;
 const Text = styled.div`
   font-size: 1.25rem;
   display: flex;
@@ -67,27 +68,28 @@ const getPosition = (id: number, rowSize: number) => {
   return { column, row };
 };
 
-const getSolution = (clicksToSolve: number, cells: Cell[], modMode: 2 | 4) => {
-  const length = cells.length;
+const getSolution = (
+  clicksToSolve: number,
+  cellCount: number,
+  modMode: ModMode
+) => {
   let solution: number[] = [];
-  while (
-    solution.length <
-    (modMode === 2 ? clicksToSolve : clicksToSolve + clicksToSolve * 0.5)
-  ) {
-    const randomPosition = Math.round(Math.random() * length);
-    if (
-      modMode === 4
-        ? Math.round(Math.random())
-        : !solution.includes(randomPosition)
-    ) {
+  while (solution.length < clicksToSolve) {
+    const randomPosition = Math.floor(Math.random() * cellCount);
+    if (!solution.includes(randomPosition)) {
       solution.push(randomPosition);
+    } else if (modMode === 4 && Math.random() >= 0.5) {
+      solution.push(randomPosition);
+      if (Math.random() <= 0.5) {
+        solution.push(randomPosition);
+      }
     }
   }
   return solution;
 };
 
-const getSolvedBoard = (cellCount: number, boardSize: number) => {
-  return new Array(cellCount).fill(0).map((_newCell, ci) => {
+const getBlankBoard = (boardSize: number) => {
+  return new Array(boardSize * boardSize).fill(0).map((_newCell, ci) => {
     return {
       id: ci,
       position: getPosition(ci, boardSize),
@@ -97,51 +99,60 @@ const getSolvedBoard = (cellCount: number, boardSize: number) => {
   });
 };
 
-const clickCell = (cell: Cell, cells: Cell[], boardSize: number) => {
-  if (!cell) window.location.reload();
-  const {
-    position: { column, row },
-    id,
-  } = cell;
+const clickCell = (
+  cell: Cell,
+  cells: Cell[],
+  boardSize: number,
+  times: number = 1
+) => {
+  // if (!cell) window.location.reload();
+  const { id } = cell;
+  const touchPattern = {
+    center: id,
+    top: id - boardSize,
+    left: id - 1,
+    right: id + 1,
+    bottom: id + boardSize,
+  };
+  const row = Math.floor(id / boardSize);
+  const column = id % boardSize;
   let cellIdsToFlip: number[] = [];
   cellIdsToFlip.push(id);
   if (column !== boardSize - 1) {
-    cellIdsToFlip.push(id + 1);
+    cellIdsToFlip.push(touchPattern.right);
   }
   if (column !== 0) {
-    cellIdsToFlip.push(id - 1);
+    cellIdsToFlip.push(touchPattern.left);
   }
   if (row !== boardSize - 1) {
-    cellIdsToFlip.push(id + boardSize);
+    cellIdsToFlip.push(touchPattern.bottom);
   }
   if (row !== 0) {
-    cellIdsToFlip.push(id - boardSize);
+    cellIdsToFlip.push(touchPattern.top);
   }
-  const unflippedCells = cells.filter(
-    (cell) => !cellIdsToFlip.includes(cell.id)
-  );
-  const flippedCells = cells
-    .filter((cell) => cellIdsToFlip.includes(cell.id))
-    .map((cell) => ({ ...cell, clicks: cell.clicks + 1 }));
-  const newCells = [...unflippedCells, ...flippedCells].sort(
-    (a, b) => a.id - b.id
-  );
+  const newCells = cells.map((cell, cellId) => {
+    if (cellIdsToFlip.includes(cellId)) {
+      return { ...cell, clicks: cell.clicks + times };
+    } else {
+      return cell;
+    }
+  });
   return newCells;
 };
-const getInitialCells = async (
-  solvedCells: Cell[],
+const getInitialCells = (
   solution: number[],
-  boardSize: number
+  boardSize: number,
+  modMode: ModMode
 ) => {
-  let initialCells = [...solvedCells];
-  await solution.forEach((cell, _solutionCellIndex) => {
-    initialCells = clickCell(solvedCells[cell], initialCells, boardSize);
+  let initialCells = [...getBlankBoard(boardSize)];
+  solution.forEach((cell, _solutionCellIndex) => {
+    initialCells = clickCell(initialCells[cell], initialCells, boardSize);
   });
-  function getOccurrence(array: number[], value: number) {
+  const getOccurrence = (array: number[], value: number) => {
     let count = 0;
     array.forEach((v) => v === value && count++);
     return count;
-  }
+  };
   return initialCells.map((cell, cellIndex) => {
     return { ...cell, solution: getOccurrence(solution, cellIndex) };
   });
@@ -149,10 +160,10 @@ const getInitialCells = async (
 
 const App = () => {
   const [hintsVisible, setHintsVisible] = useState(false);
-  const [cells, setCells] = useState<Cell[]>([]);
   const [modMode, setModMode] = useState<2 | 4>(2);
   const [boardSize, setBoardSize] = useState(5);
   const [boardDensity, setBoardDensity] = useState(0.4);
+  const [cells, setCells] = useState<Cell[]>(getBlankBoard(boardSize));
 
   const toggleHints = () => {
     setHintsVisible(!hintsVisible);
@@ -180,24 +191,16 @@ const App = () => {
       setBoardDensity(boardDensity - 0.1);
     }
   };
-  const handleCellClick = async (cell: Cell) => {
-    const newCells = await clickCell(cell, cells, boardSize);
+  const handleCellClick = (cell: Cell) => {
+    const newCells = clickCell(cell, cells, boardSize);
     setCells(newCells);
   };
   useEffect(() => {
-    const getNewCells = async (
-      newBoard: Cell[],
-      solution: number[],
-      boardSize: number
-    ) => {
-      const newCells = await getInitialCells(newBoard, solution, boardSize);
-      setCells(newCells);
-    };
     const cellCount = boardSize * boardSize;
     const clicksToSolve = Math.floor(cellCount * boardDensity);
-    const newBoard = getSolvedBoard(cellCount, boardSize);
-    const solution: number[] = getSolution(clicksToSolve, newBoard, modMode);
-    getNewCells(newBoard, solution, boardSize);
+    const solution: number[] = getSolution(clicksToSolve, cellCount, modMode);
+    const newCells = getInitialCells(solution, boardSize, modMode);
+    setCells(newCells);
   }, [modMode, boardSize, boardDensity]);
   return (
     <>
@@ -229,7 +232,7 @@ const App = () => {
           </Cell>
         ))}
       </MainGrid>
-      <div style={{ display: "flex" }}>
+      <div style={{ display: "grid", columns: "1fr 1fr 1fr" }}>
         <ButtonGroup>
           <Button
             bg={modMode === 2 ? "lightgreen" : "orange"}
@@ -241,8 +244,8 @@ const App = () => {
             Hints
           </Button>
         </ButtonGroup>
-        <Text>Size:</Text>
         <ButtonGroup>
+          <Text>Size:</Text>
           <Button bg="lightblue" onClick={increaseBoardSize}>
             Increase
           </Button>
@@ -250,8 +253,8 @@ const App = () => {
             Decrease
           </Button>
         </ButtonGroup>
-        <Text>Density:</Text>
         <ButtonGroup>
+          <Text>Density:</Text>
           <Button bg="pink" onClick={increaseDensity}>
             Increase
           </Button>
