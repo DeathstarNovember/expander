@@ -232,9 +232,11 @@ const App = () => {
   };
   const resetBoard = () => {
     setCells(startingBoard);
+    setUserClicks(0);
   };
   const getNewGame = () => {
     pushReset(!reset);
+    setUserClicks(0);
   };
   const toggleModMode = () => {
     setModMode(modMode === 2 ? 4 : 2);
