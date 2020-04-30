@@ -5,12 +5,23 @@ import {
   Cell,
   Layout,
   ControlPanel,
-  StatsPane,
+  StatsPanel,
+  SettingsPanel,
+  Buttons,
   ButtonGroup,
   Button,
   MainGrid,
   Text,
 } from "./styledComponents";
+import {
+  FaCompressArrowsAlt,
+  FaExpandArrowsAlt,
+  FaRedoAlt,
+  FaPowerOff,
+  FaInfo,
+} from "react-icons/fa";
+import { FiTrendingUp, FiTrendingDown } from "react-icons/fi";
+import { TiWarning, TiWarningOutline } from "react-icons/ti";
 
 const getPosition = (id: number, rowSize: number) => {
   const row = Math.floor(id / rowSize);
@@ -179,47 +190,46 @@ const App = () => {
   return (
     <Layout>
       <ControlPanel>
-        <StatsPane>
-          <Text size={2}>Minimum clicks to solve: {minimumSolutionSize}</Text>
-          <Text size={2}>Your clicks: {userClicks}</Text>
-        </StatsPane>
-
-        <ButtonGroup>
-          <Text>Settings:</Text>
-          <Button bg="lightgreen" onClick={toggleModMode}>
-            Mode
-          </Button>
-          <Button bg="lightgreen" onClick={toggleHints}>
-            Hints
-          </Button>
-        </ButtonGroup>
-        <ButtonGroup>
-          <Text>Start Over:</Text>
-          <Button bg="gray" onClick={resetBoard}>
-            Reset
-          </Button>
-          <Button bg="gray" onClick={getNewGame}>
-            NewGame
-          </Button>
-        </ButtonGroup>
-        <ButtonGroup>
-          <Text>Size:</Text>
-          <Button bg="lightblue" onClick={increaseBoardSize}>
-            Increase
-          </Button>
-          <Button bg="lightBlue" onClick={decreaseBoardSize}>
-            Decrease
-          </Button>
-        </ButtonGroup>
-        <ButtonGroup>
-          <Text>Density:</Text>
-          <Button bg="pink" onClick={increaseDensity}>
-            Increase
-          </Button>
-          <Button bg="pink" onClick={decreaseDensity}>
-            Decrease
-          </Button>
-        </ButtonGroup>
+        <StatsPanel>
+          <Text size={1.5}>Par: {minimumSolutionSize}</Text>
+          <Text size={1.5}>Score: {userClicks}</Text>
+        </StatsPanel>
+        <Buttons>
+          <ButtonGroup>
+            <Button bg="lightgreen" onClick={toggleModMode}>
+              {modMode === 2 ? <TiWarningOutline /> : <TiWarning />}
+            </Button>
+            <Button bg="lightgreen" onClick={toggleHints}>
+              <FaInfo />
+            </Button>
+          </ButtonGroup>
+          <ButtonGroup>
+            <Button bg="gray" onClick={getNewGame}>
+              <FaPowerOff />
+            </Button>
+            <Button bg="gray" onClick={resetBoard}>
+              <FaRedoAlt />
+            </Button>
+          </ButtonGroup>
+        </Buttons>
+        <SettingsPanel>
+          <ButtonGroup>
+            <Button bg="lightblue" onClick={increaseBoardSize}>
+              <FaExpandArrowsAlt />
+            </Button>
+            <Button bg="lightBlue" onClick={decreaseBoardSize}>
+              <FaCompressArrowsAlt />
+            </Button>
+          </ButtonGroup>
+          <ButtonGroup>
+            <Button bg="pink" onClick={increaseDensity}>
+              <FiTrendingUp />
+            </Button>
+            <Button bg="pink" onClick={decreaseDensity}>
+              <FiTrendingDown />
+            </Button>
+          </ButtonGroup>
+        </SettingsPanel>
       </ControlPanel>
       <MainGrid size={boardSize}>
         {cells.map((cell) => {
