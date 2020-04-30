@@ -13,10 +13,10 @@ type ButtonProps = {
 };
 export const Button = styled.button<ButtonProps>`
   background: ${(props) => props.bg || ""}
-  height: 44px;
   font-size: 1rem;
   border-radius: 5px;
-  margin: 0 5px;
+  margin: 5px;
+  padding: 5px;
 `;
 
 export const ButtonGroup = styled.div`
@@ -81,8 +81,8 @@ export const ControlPanel = styled.div<ControlPanelProps>`
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
   }
-  padding: 20px;
-  margin: 20px;
+  padding: 10px;
+  margin: 10px;
   border: 2px solid darkblue;
   border-radius: 5px;
   background: violet;
@@ -111,7 +111,7 @@ type MainGridProps = {
   size: number;
 };
 export const MainGrid = styled.div<MainGridProps>`
-  padding: 20px;
+  padding: 10px;
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(${(props) => props.size}, 1fr);
