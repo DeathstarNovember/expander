@@ -3,15 +3,14 @@ import "./App.css";
 import {
   ModMode,
   Cell,
+  CellContentGrid,
   Layout,
+  Button,
+  GameGrid,
   ControlPanel,
   StatsPanel,
-  SettingsPanel,
-  Buttons,
-  ButtonGroup,
-  Button,
-  MainGrid,
   Text,
+  CellContentItem,
 } from "./styledComponents";
 import {
   FaCompressArrowsAlt,
@@ -22,6 +21,7 @@ import {
 } from "react-icons/fa";
 import { FiTrendingUp, FiTrendingDown } from "react-icons/fi";
 import { TiWarning, TiWarningOutline } from "react-icons/ti";
+import { MdLightbulbOutline } from "react-icons/md";
 
 const getPosition = (id: number, rowSize: number) => {
   const row = Math.floor(id / rowSize);
@@ -127,7 +127,7 @@ const getInitialCells = (solution: number[], boardSize: number) => {
 const App = () => {
   const [hintsVisible, setHintsVisible] = useState(false);
   const [modMode, setModMode] = useState<2 | 4>(2);
-  const [boardSize, setBoardSize] = useState(5);
+  const [boardSize, setBoardSize] = useState(3);
   const [boardDensity, setBoardDensity] = useState(0.4);
   const [cells, setCells] = useState<Cell[]>(getBlankBoard(boardSize));
   const [startingBoard, setStartingBoard] = useState<Cell[]>(cells);
@@ -194,69 +194,70 @@ const App = () => {
           <Text size={1.5}>Par: {minimumSolutionSize}</Text>
           <Text size={1.5}>Score: {userClicks}</Text>
         </StatsPanel>
-        <Buttons>
-          <ButtonGroup>
-            <Button bg="lightgreen" onClick={toggleModMode}>
-              {modMode === 2 ? <TiWarningOutline /> : <TiWarning />}
-            </Button>
-            <Button bg="lightgreen" onClick={toggleHints}>
-              <FaInfo />
-            </Button>
-          </ButtonGroup>
-          <ButtonGroup>
-            <Button bg="gray" onClick={getNewGame}>
-              <FaPowerOff />
-            </Button>
-            <Button bg="gray" onClick={resetBoard}>
-              <FaRedoAlt />
-            </Button>
-          </ButtonGroup>
-        </Buttons>
-        <SettingsPanel>
-          <ButtonGroup>
-            <Button bg="lightblue" onClick={increaseBoardSize}>
-              <FaExpandArrowsAlt />
-            </Button>
-            <Button bg="lightBlue" onClick={decreaseBoardSize}>
-              <FaCompressArrowsAlt />
-            </Button>
-          </ButtonGroup>
-          <ButtonGroup>
-            <Button bg="pink" onClick={increaseDensity}>
-              <FiTrendingUp />
-            </Button>
-            <Button bg="pink" onClick={decreaseDensity}>
-              <FiTrendingDown />
-            </Button>
-          </ButtonGroup>
-        </SettingsPanel>
+        <Button color="lightgreen" onClick={toggleModMode}>
+          {modMode === 2 ? <TiWarningOutline /> : <TiWarning />}
+        </Button>
+        <Button color="lightgreen" onClick={toggleHints}>
+          <FaInfo />
+        </Button>
+        <Button color="gray" onClick={getNewGame}>
+          <FaPowerOff />
+        </Button>
+        <Button color="gray" onClick={resetBoard}>
+          <FaRedoAlt />
+        </Button>
+        <Button color="lightblue" onClick={increaseBoardSize}>
+          <FaExpandArrowsAlt />
+        </Button>
+        <Button color="lightBlue" onClick={decreaseBoardSize}>
+          <FaCompressArrowsAlt />
+        </Button>
+        <Button color="pink" onClick={increaseDensity}>
+          <FiTrendingUp />
+        </Button>
+        <Button color="pink" onClick={decreaseDensity}>
+          <FiTrendingDown />
+        </Button>
       </ControlPanel>
-      <MainGrid size={boardSize}>
+      <GameGrid size={boardSize}>
         {cells.map((cell) => {
           return (
             <Cell
               key={cell.id}
               cell={cell}
               mod={modMode}
-              style={{ fontSize: "3rem" }}
               onClick={() => handleCellClick(cell)}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <CellContentGrid>
                 {/* <div>{cell.clicks % mod}</div> */}
                 {hintsVisible ? (
-                  <div>{(modMode - cell.clicks) % modMode}</div>
-                ) : null}
-              </div>
+                  <CellContentItem
+                    column={1}
+                    row={1}
+                    size={3}
+                    boardSize={boardSize}
+                  >
+                    {cell.clicks - cell.solution}/
+                    {modMode === 2
+                      ? cell.clicks % modMode
+                      : (modMode - ((modMode + cell.clicks) % modMode)) %
+                        modMode}
+                  </CellContentItem>
+                ) : (
+                  <CellContentItem
+                    size={3}
+                    column={1}
+                    row={1}
+                    boardSize={boardSize}
+                  >
+                    <MdLightbulbOutline />
+                  </CellContentItem>
+                )}
+              </CellContentGrid>
             </Cell>
           );
         })}
-      </MainGrid>
+      </GameGrid>
     </Layout>
   );
 };
