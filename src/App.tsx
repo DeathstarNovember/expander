@@ -22,6 +22,7 @@ import {
 import { FiTrendingUp, FiTrendingDown } from "react-icons/fi";
 import { TiWarning, TiWarningOutline } from "react-icons/ti";
 import { MdLightbulbOutline } from "react-icons/md";
+import { ThreeD } from "./threeD/ThreeD";
 
 const getPosition = (id: number, rowSize: number) => {
   const row = Math.floor(id / rowSize);
@@ -124,7 +125,12 @@ const getInitialCells = (solution: number[], boardSize: number) => {
   });
 };
 
-const App = () => {
+type AppProps = {
+  location: string;
+};
+
+const App: React.FC<AppProps> = ({ location }) => {
+  console.warn({ location });
   const [hintsVisible, setHintsVisible] = useState(false);
   const [modMode, setModMode] = useState<2 | 4>(2);
   const [boardSize, setBoardSize] = useState(3);
@@ -187,79 +193,83 @@ const App = () => {
     setStartingBoard(newCells);
     setMinimumSolutionSize(minimumSolutionSize);
   }, [modMode, boardSize, boardDensity, reset]);
-  return (
-    <Layout>
-      <ControlPanel>
-        <StatsPanel>
-          <Text size={1.5}>Par: {minimumSolutionSize}</Text>
-          <Text size={1.5}>Score: {userClicks}</Text>
-        </StatsPanel>
-        <Button color="lightgreen" onClick={toggleModMode}>
-          {modMode === 2 ? <TiWarningOutline /> : <TiWarning />}
-        </Button>
-        <Button color="lightgreen" onClick={toggleHints}>
-          <FaInfo />
-        </Button>
-        <Button color="gray" onClick={getNewGame}>
-          <FaPowerOff />
-        </Button>
-        <Button color="gray" onClick={resetBoard}>
-          <FaRedoAlt />
-        </Button>
-        <Button color="lightblue" onClick={increaseBoardSize}>
-          <FaExpandArrowsAlt />
-        </Button>
-        <Button color="lightBlue" onClick={decreaseBoardSize}>
-          <FaCompressArrowsAlt />
-        </Button>
-        <Button color="pink" onClick={increaseDensity}>
-          <FiTrendingUp />
-        </Button>
-        <Button color="pink" onClick={decreaseDensity}>
-          <FiTrendingDown />
-        </Button>
-      </ControlPanel>
-      <GameGrid size={boardSize}>
-        {cells.map((cell) => {
-          return (
-            <Cell
-              key={cell.id}
-              cell={cell}
-              mod={modMode}
-              onClick={() => handleCellClick(cell)}
-            >
-              <CellContentGrid>
-                {/* <div>{cell.clicks % mod}</div> */}
-                {hintsVisible ? (
-                  <CellContentItem
-                    column={1}
-                    row={1}
-                    size={3}
-                    boardSize={boardSize}
-                  >
-                    {cell.clicks - cell.solution}/
-                    {modMode === 2
-                      ? cell.clicks % modMode
-                      : (modMode - ((modMode + cell.clicks) % modMode)) %
-                        modMode}
-                  </CellContentItem>
-                ) : (
-                  <CellContentItem
-                    size={3}
-                    column={1}
-                    row={1}
-                    boardSize={boardSize}
-                  >
-                    <MdLightbulbOutline />
-                  </CellContentItem>
-                )}
-              </CellContentGrid>
-            </Cell>
-          );
-        })}
-      </GameGrid>
-    </Layout>
-  );
+  if (location === "/3d") {
+    return <ThreeD />;
+  } else {
+    return (
+      <Layout>
+        <ControlPanel>
+          <StatsPanel>
+            <Text size={1.5}>Par: {minimumSolutionSize}</Text>
+            <Text size={1.5}>Score: {userClicks}</Text>
+          </StatsPanel>
+          <Button color="lightgreen" onClick={toggleModMode}>
+            {modMode === 2 ? <TiWarningOutline /> : <TiWarning />}
+          </Button>
+          <Button color="lightgreen" onClick={toggleHints}>
+            <FaInfo />
+          </Button>
+          <Button color="gray" onClick={getNewGame}>
+            <FaPowerOff />
+          </Button>
+          <Button color="gray" onClick={resetBoard}>
+            <FaRedoAlt />
+          </Button>
+          <Button color="lightblue" onClick={increaseBoardSize}>
+            <FaExpandArrowsAlt />
+          </Button>
+          <Button color="lightBlue" onClick={decreaseBoardSize}>
+            <FaCompressArrowsAlt />
+          </Button>
+          <Button color="pink" onClick={increaseDensity}>
+            <FiTrendingUp />
+          </Button>
+          <Button color="pink" onClick={decreaseDensity}>
+            <FiTrendingDown />
+          </Button>
+        </ControlPanel>
+        <GameGrid size={boardSize}>
+          {cells.map((cell) => {
+            return (
+              <Cell
+                key={cell.id}
+                cell={cell}
+                mod={modMode}
+                onClick={() => handleCellClick(cell)}
+              >
+                <CellContentGrid>
+                  {/* <div>{cell.clicks % mod}</div> */}
+                  {hintsVisible ? (
+                    <CellContentItem
+                      column={1}
+                      row={1}
+                      size={3}
+                      boardSize={boardSize}
+                    >
+                      {cell.clicks - cell.solution}/
+                      {modMode === 2
+                        ? cell.clicks % modMode
+                        : (modMode - ((modMode + cell.clicks) % modMode)) %
+                          modMode}
+                    </CellContentItem>
+                  ) : (
+                    <CellContentItem
+                      size={3}
+                      column={1}
+                      row={1}
+                      boardSize={boardSize}
+                    >
+                      <MdLightbulbOutline />
+                    </CellContentItem>
+                  )}
+                </CellContentGrid>
+              </Cell>
+            );
+          })}
+        </GameGrid>
+      </Layout>
+    );
+  }
 };
 
 export default App;
