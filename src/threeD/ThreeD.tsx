@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "react-three-fiber";
-import { OrbitControls, StandardEffects } from "drei";
+import { Canvas, useFrame } from "react-three-fiber";
+import { OrbitControls } from "drei";
 import * as THREE from "three";
-import { Object3D } from "three";
 type Cube = {
   position: {
     x: number;
@@ -15,29 +14,28 @@ type Cube = {
 };
 
 type BoxProps = {
-  position: [number, number, number];
   cube: Cube;
   cubeIndex: number;
-  scaleFactor: number;
-  onClick: (arg0: Cube) => void;
+  handleClick: (arg0: Cube) => void;
 };
-const Box: React.FC<BoxProps> = ({ cube, scaleFactor, onClick }) => {
+const Box: React.FC<BoxProps> = ({ cube, handleClick }) => {
   const { x, y, z } = cube.position;
-  const mesh = useRef<Object3D>();
-  const geometry = useRef<THREE.BoxBufferGeometry>();
+  const mesh = useRef<THREE.Mesh>();
   useFrame(() => {
     if (mesh.current) {
-      geometry.current!.computeBoundingBox();
       return (mesh.current.rotation.x = mesh.current.rotation.y += 0.01);
     }
   });
 
   return (
-    <mesh position={[x, y, z]} ref={mesh} onClick={(e) => onClick(cube)}>
-      <boxBufferGeometry ref={geometry} attach="geometry" args={[1, 1, 1]} />
+    <mesh position={[x, y, z]} ref={mesh} onClick={() => handleClick(cube)}>
+      <boxBufferGeometry attach="geometry" args={[1, 1, 1]} />
       <meshPhysicalMaterial
         attach="material"
-        color={cube.flips % 2 ? "orange" : "gray"}
+        transparent
+        opacity={0.95}
+        refractionRatio={0.2}
+        color={cube.flips % 2 ? "rgb(200, 150, 55)" : "rgb(150, 150, 150)"}
       />
     </mesh>
   );
@@ -148,13 +146,13 @@ const getInitialCubes = (
   );
   return initialCubes;
 };
+
 export const ThreeD = () => {
-  const [scaleFactor, setScaleFactor] = useState(2);
+  const scaleFactor = 2;
   const [puzzleSize, setPuzzleSize] = useState(4);
   const [cubes, setCubes] = useState<Cube[]>(
     getBlankPuzzle(puzzleSize, scaleFactor)
   );
-  console.warn({ cubes });
   const transDist = -1 * ((puzzleSize - 1) / 2) * scaleFactor;
   const translation: [number, number, number] = [
     transDist,
@@ -165,17 +163,32 @@ export const ThreeD = () => {
     const newCubes = flipCube(cube, cubes, puzzleSize, scaleFactor);
     setCubes(newCubes);
   };
+
   useEffect(() => {
     const solutionSize = 5;
     const solution = getSolution(solutionSize, puzzleSize);
     const newCubes = getInitialCubes(solution, puzzleSize, scaleFactor);
     setCubes(newCubes);
-  }, []);
-
+  }, [puzzleSize]);
   return (
     <Canvas
-      style={{ height: "100vh", width: "100vw" }}
-      camera={{ position: [0, 5, 10], near: 1, far: 40 }}
+      style={{
+        height: "100vh",
+        width: "100vw",
+        backgroundImage: `linear-gradient(to top, #09203f 0%, #537895 100%)`,
+        backgroundBlendMode: `multiply, multiply`,
+      }}
+      raycaster={{
+        filter: (items) => items.slice(0, 1),
+      }}
+      camera={{
+        position: [0, 0, 20],
+        isPerspectiveCamera: true,
+        fov: 45,
+        near: 1,
+        far: 40,
+        aspect: window.innerWidth / window.innerHeight,
+      }}
     >
       <ambientLight />
       <OrbitControls />
@@ -184,11 +197,9 @@ export const ThreeD = () => {
         {cubes.map((cube, cubeIndex) => (
           <Box
             key={`cube${cubeIndex}`}
-            position={[cube.position.x, cube.position.y, cube.position.z]}
             cube={cube}
             cubeIndex={cube.index}
-            scaleFactor={scaleFactor}
-            onClick={handleCubeClick}
+            handleClick={handleCubeClick}
           />
         ))}
       </group>
