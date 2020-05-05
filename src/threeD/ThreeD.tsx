@@ -1,44 +1,18 @@
-import React, { useRef, useState, useEffect } from "react";
-import { Canvas, useFrame } from "react-three-fiber";
+import React, { useRef, useState, useEffect, Suspense } from "react";
+import { Canvas, useFrame, useThree, useLoader } from "react-three-fiber";
 import { OrbitControls } from "drei";
 import * as THREE from "three";
+
+type Position = {
+  x: number;
+  y: number;
+  z: number;
+};
 type Cube = {
-  position: {
-    x: number;
-    y: number;
-    z: number;
-  };
+  position: Position;
   index: number;
   clicks: number;
   flips: number;
-};
-
-type BoxProps = {
-  cube: Cube;
-  cubeIndex: number;
-  handleClick: (arg0: Cube) => void;
-};
-const Box: React.FC<BoxProps> = ({ cube, handleClick }) => {
-  const { x, y, z } = cube.position;
-  const mesh = useRef<THREE.Mesh>();
-  useFrame(() => {
-    if (mesh.current) {
-      return (mesh.current.rotation.x = mesh.current.rotation.y += 0.01);
-    }
-  });
-
-  return (
-    <mesh position={[x, y, z]} ref={mesh} onClick={() => handleClick(cube)}>
-      <boxBufferGeometry attach="geometry" args={[1, 1, 1]} />
-      <meshPhysicalMaterial
-        attach="material"
-        transparent
-        opacity={0.95}
-        refractionRatio={0.2}
-        color={cube.flips % 2 ? "rgb(200, 150, 55)" : "rgb(150, 150, 150)"}
-      />
-    </mesh>
-  );
 };
 
 const get3DPosition = (
@@ -147,8 +121,64 @@ const getInitialCubes = (
   return initialCubes;
 };
 
+type NumberProps = { number: number; position: Position };
+
+const Number: React.FC<NumberProps> = ({ number, position }) => {
+  const { x, y, z } = position;
+  const font = useLoader(THREE.FontLoader, "helvetiker_bold.typeface.json");
+  return (
+    <mesh position={[x - 0.4, y - 0.4, z]}>
+      <textBufferGeometry
+        attach="geometry"
+        args={[
+          number.toString(),
+          {
+            font,
+            height: 0.1,
+            size: 0.8,
+          },
+        ]}
+      />
+      <meshLambertMaterial
+        attach="material"
+        color="black"
+        emissive={new THREE.Color("green")}
+      />
+    </mesh>
+  );
+};
+
+type BoxProps = {
+  cube: Cube;
+  cubeIndex: number;
+  handleClick: (arg0: Cube) => void;
+};
+const Box: React.FC<BoxProps> = ({ cube, handleClick }) => {
+  const { x, y, z } = cube.position;
+  const mesh = useRef<THREE.Mesh>();
+  useFrame(() => {
+    if (mesh.current) {
+      return (mesh.current.rotation.x = mesh.current.rotation.y += 0.01);
+    }
+  });
+
+  return (
+    <mesh position={[x, y, z]} ref={mesh} onClick={() => handleClick(cube)}>
+      <boxBufferGeometry attach="geometry" args={[1, 1, 1]} />
+      <meshPhysicalMaterial
+        attach="material"
+        transparent
+        opacity={0.75}
+        refractionRatio={0.2}
+        color={cube.flips % 2 ? "rgb(200, 150, 55)" : "rgb(150, 150, 150)"}
+      />
+    </mesh>
+  );
+};
+
 export const ThreeD = () => {
   const scaleFactor = 2;
+  const [hintsVisible, setHintsVisible] = useState(false);
   const [puzzleSize, setPuzzleSize] = useState(4);
   const [cubes, setCubes] = useState<Cube[]>(
     getBlankPuzzle(puzzleSize, scaleFactor)
@@ -195,12 +225,18 @@ export const ThreeD = () => {
       <pointLight position={[5, 5, 5]} />
       <group position={translation}>
         {cubes.map((cube, cubeIndex) => (
-          <Box
-            key={`cube${cubeIndex}`}
-            cube={cube}
-            cubeIndex={cube.index}
-            handleClick={handleCubeClick}
-          />
+          <group key={`cube${cubeIndex}`}>
+            <Box
+              cube={cube}
+              cubeIndex={cube.index}
+              handleClick={handleCubeClick}
+            />
+            {hintsVisible ? (
+              <Suspense fallback={"Loading"}>
+                <Number number={cube.clicks % 2} position={cube.position} />
+              </Suspense>
+            ) : null}
+          </group>
         ))}
       </group>
     </Canvas>
