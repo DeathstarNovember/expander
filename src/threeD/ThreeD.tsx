@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, Suspense } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "react-three-fiber";
-import { OrbitControls } from "drei";
+import { OrbitControls, StandardEffects } from "drei";
 import * as THREE from "three";
 
 type Position = {
@@ -121,11 +121,23 @@ const getInitialCubes = (
   return initialCubes;
 };
 
-type NumberProps = { number: number; position: Position };
+type HintProps = { number: number; position: Position; hintActive: boolean };
 
-const Number: React.FC<NumberProps> = ({ number, position }) => {
+const Hint: React.FC<HintProps> = ({ number, position, hintActive }) => {
   const { x, y, z } = position;
+  const materialRef = useRef<THREE.MeshLambertMaterial>();
   const font = useLoader(THREE.FontLoader, "helvetiker_bold.typeface.json");
+  const emissive = hintActive ? new THREE.Color("white") : undefined;
+  useFrame(() => {
+    if (materialRef.current) {
+      if (hintActive) {
+        materialRef.current.emissive = new THREE.Color("white");
+        return (materialRef.current.color = new THREE.Color("white"));
+      }
+      materialRef.current.emissive = new THREE.Color("black");
+      return (materialRef.current.color = new THREE.Color("black"));
+    }
+  });
   return (
     <mesh position={[x - 0.4, y - 0.4, z]}>
       <textBufferGeometry
@@ -140,9 +152,9 @@ const Number: React.FC<NumberProps> = ({ number, position }) => {
         ]}
       />
       <meshLambertMaterial
+        ref={materialRef}
         attach="material"
-        color="black"
-        emissive={new THREE.Color("green")}
+        emissive={emissive}
       />
     </mesh>
   );
@@ -152,25 +164,50 @@ type BoxProps = {
   cube: Cube;
   cubeIndex: number;
   handleClick: (arg0: Cube) => void;
+  hints: boolean;
+  modMode: 2 | 4;
 };
-const Box: React.FC<BoxProps> = ({ cube, handleClick }) => {
-  const { x, y, z } = cube.position;
+const Box: React.FC<BoxProps> = ({ cube, handleClick, hints, modMode }) => {
+  const { flips, position } = cube;
+  const { x, y, z } = position;
   const mesh = useRef<THREE.Mesh>();
+  const [rotationScale, setRotationScale] = useState(0.01);
+  const onClick = () => {
+    handleClick(cube);
+    setRotationScale(rotationScale * -1);
+  };
   useFrame(() => {
     if (mesh.current) {
-      return (mesh.current.rotation.x = mesh.current.rotation.y += 0.01);
+      return (mesh.current.rotation.x = mesh.current.rotation.y +=
+        Math.random() * rotationScale);
     }
   });
-
+  const lightIsOut = (flips - 0) % modMode === 0;
+  let materialColor = "";
+  if (lightIsOut) {
+    materialColor = "rgb(50, 50, 50); ";
+  } else if ((flips - 1) % modMode === 0) {
+    materialColor = "rgb(200, 150, 55)";
+  } else if ((flips - 2) % modMode === 0) {
+    materialColor = "rgb(206, 0, 110)";
+  } else if ((flips - 3) % modMode === 0) {
+    materialColor = "rgb(47, 98, 207)";
+  }
   return (
-    <mesh position={[x, y, z]} ref={mesh} onClick={() => handleClick(cube)}>
+    <mesh
+      position={[x, y, z]}
+      ref={mesh}
+      onClick={onClick}
+      receiveShadow
+      castShadow
+    >
       <boxBufferGeometry attach="geometry" args={[1, 1, 1]} />
-      <meshPhysicalMaterial
+      <meshLambertMaterial
         attach="material"
         transparent
-        opacity={0.75}
+        opacity={hints ? 0.5 : 0.5}
         refractionRatio={0.2}
-        color={cube.flips % 2 ? "rgb(200, 150, 55)" : "rgb(150, 150, 150)"}
+        color={materialColor}
       />
     </mesh>
   );
@@ -179,7 +216,8 @@ const Box: React.FC<BoxProps> = ({ cube, handleClick }) => {
 export const ThreeD = () => {
   const scaleFactor = 2;
   const [hintsVisible, setHintsVisible] = useState(false);
-  const [puzzleSize, setPuzzleSize] = useState(4);
+  const [puzzleSize, setPuzzleSize] = useState<number>(4);
+  const [modMode, setModMode] = useState<2 | 4>(4);
   const [cubes, setCubes] = useState<Cube[]>(
     getBlankPuzzle(puzzleSize, scaleFactor)
   );
@@ -195,50 +233,87 @@ export const ThreeD = () => {
   };
 
   useEffect(() => {
-    const solutionSize = 5;
+    const solutionSize = 10;
     const solution = getSolution(solutionSize, puzzleSize);
     const newCubes = getInitialCubes(solution, puzzleSize, scaleFactor);
     setCubes(newCubes);
   }, [puzzleSize]);
+
   return (
-    <Canvas
+    <div
       style={{
-        height: "100vh",
+        position: "relative",
         width: "100vw",
+        height: "100vh",
         backgroundImage: `linear-gradient(to top, #09203f 0%, #537895 100%)`,
         backgroundBlendMode: `multiply, multiply`,
       }}
-      raycaster={{
-        filter: (items) => items.slice(0, 1),
-      }}
-      camera={{
-        position: [0, 0, 20],
-        isPerspectiveCamera: true,
-        fov: 45,
-        near: 1,
-        far: 40,
-        aspect: window.innerWidth / window.innerHeight,
-      }}
     >
-      <ambientLight />
-      <OrbitControls />
-      <pointLight position={[5, 5, 5]} />
-      <group position={translation}>
-        {cubes.map((cube, cubeIndex) => (
-          <group key={`cube${cubeIndex}`}>
-            <Box
-              cube={cube}
-              cubeIndex={cube.index}
-              handleClick={handleCubeClick}
-            />
-            {hintsVisible ? (
+      <button
+        style={{ zIndex: 99, position: "fixed", top: 10, left: 10 }}
+        onClick={() => setHintsVisible(!hintsVisible)}
+      >
+        Hints
+      </button>
+      <Canvas
+        gl={{ logarithmicDepthBuffer: true }}
+        style={{
+          height: "100vh",
+          width: "100vw",
+          background: "transparent",
+        }}
+        raycaster={{
+          filter: (items) => items.slice(0, 1),
+        }}
+        camera={{
+          position: [10, 10, 10],
+          isPerspectiveCamera: true,
+          fov: 45,
+          near: 1,
+          far: 40,
+          aspect: window.innerWidth / window.innerHeight,
+        }}
+      >
+        <ambientLight />
+        <Suspense fallback={null}>
+          <StandardEffects
+            bloom={true}
+            ao={false}
+            edgeDetection={0.1}
+            smaa={false}
+            bloomOpacity={0.7}
+          />
+          <OrbitControls />
+        </Suspense>
+        <pointLight position={[5, 5, 5]} />
+        <group position={translation}>
+          {cubes.map((cube, cubeIndex) => (
+            <group key={`cube${cubeIndex}`}>
+              <Box
+                cube={cube}
+                cubeIndex={cube.index}
+                handleClick={handleCubeClick}
+                hints={hintsVisible}
+                modMode={modMode}
+              />
               <Suspense fallback={"Loading"}>
-                <Number number={cube.clicks % 2} position={cube.position} />
+                {hintsVisible ? (
+                  <Hint
+                    number={
+                      modMode === 2
+                        ? cube.clicks % modMode
+                        : (modMode - ((modMode + cube.clicks) % modMode)) %
+                          modMode
+                    }
+                    position={cube.position}
+                    hintActive={cube.clicks % modMode !== 0}
+                  />
+                ) : null}
               </Suspense>
-            ) : null}
-          </group>
-        ))}
-      </group>
-    </Canvas>
+            </group>
+          ))}
+        </group>
+      </Canvas>
+    </div>
   );
 };
