@@ -172,6 +172,7 @@ const Box: React.FC<BoxProps> = ({ cube, handleClick, hints, modMode }) => {
   const { x, y, z } = position;
   const mesh = useRef<THREE.Mesh>();
   const [rotationScale, setRotationScale] = useState(0.01);
+
   const onClick = () => {
     handleClick(cube);
     setRotationScale(rotationScale * -1);
@@ -189,7 +190,7 @@ const Box: React.FC<BoxProps> = ({ cube, handleClick, hints, modMode }) => {
   } else if ((flips - 1) % modMode === 0) {
     materialColor = "rgb(200, 150, 55)";
   } else if ((flips - 2) % modMode === 0) {
-    materialColor = "rgb(206, 0, 110)";
+    materialColor = "rgb(206, 10, 110)";
   } else if ((flips - 3) % modMode === 0) {
     materialColor = "rgb(47, 98, 207)";
   }
@@ -205,9 +206,13 @@ const Box: React.FC<BoxProps> = ({ cube, handleClick, hints, modMode }) => {
       <meshLambertMaterial
         attach="material"
         transparent
-        opacity={hints ? 0.5 : 0.5}
+        opacity={hints ? 0.5 : 1}
         refractionRatio={0.2}
         color={materialColor}
+        emissive={
+          !lightIsOut ? new THREE.Color("gray") : new THREE.Color("black")
+        }
+        emissiveIntensity={0.5}
       />
     </mesh>
   );
@@ -249,12 +254,10 @@ export const ThreeD = () => {
         backgroundBlendMode: `multiply, multiply`,
       }}
     >
-      <button
-        style={{ zIndex: 99, position: "fixed", top: 10, left: 10 }}
-        onClick={() => setHintsVisible(!hintsVisible)}
-      >
-        Hints
-      </button>
+      <div style={{ zIndex: 99, position: "fixed", top: 10, left: 10 }}>
+        <button onClick={() => setModMode(modMode === 2 ? 4 : 2)}>Mode</button>
+        <button onClick={() => setHintsVisible(!hintsVisible)}>Hints</button>
+      </div>
       <Canvas
         gl={{ logarithmicDepthBuffer: true }}
         style={{
@@ -281,7 +284,7 @@ export const ThreeD = () => {
             ao={false}
             edgeDetection={0.1}
             smaa={false}
-            bloomOpacity={0.7}
+            bloomOpacity={0.5}
           />
           <OrbitControls />
         </Suspense>
