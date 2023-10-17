@@ -1,6 +1,16 @@
 import React, { useRef, useState, useEffect, Suspense } from "react";
-import { Canvas, useFrame, useThree, useLoader } from "react-three-fiber";
-import { OrbitControls, StandardEffects } from "drei";
+import {
+  Canvas,
+  useFrame,
+  useThree,
+  useLoader,
+  extend,
+  Object3DNode,
+} from "@react-three/fiber";
+import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry";
+import { BoxLineGeometry } from "three/examples/jsm/geometries/BoxLineGeometry";
+import { FontLoader } from "three/examples/jsm/loaders/FontLoader";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 
 type Position = {
@@ -14,6 +24,15 @@ type Cube = {
   clicks: number;
   flips: number;
 };
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      textGeometry: Object3DNode<TextGeometry, typeof TextGeometry>;
+      boxGeometry: Object3DNode<BoxLineGeometry, typeof BoxLineGeometry>;
+    }
+  }
+}
 
 const get3DPosition = (
   index: number,
@@ -124,9 +143,10 @@ const getInitialCubes = (
 type HintProps = { number: number; position: Position; hintActive: boolean };
 
 const Hint: React.FC<HintProps> = ({ number, position, hintActive }) => {
+  extend({ TextGeometry });
   const { x, y, z } = position;
-  const materialRef = useRef<THREE.MeshLambertMaterial>();
-  const font = useLoader(THREE.FontLoader, "helvetiker_bold.typeface.json");
+  const materialRef = useRef<THREE.MeshLambertMaterial>(null);
+  const font = useLoader(FontLoader, "helvetiker_bold.typeface.json");
   const emissive = hintActive ? new THREE.Color("white") : undefined;
   useFrame(() => {
     if (materialRef.current) {
@@ -140,7 +160,7 @@ const Hint: React.FC<HintProps> = ({ number, position, hintActive }) => {
   });
   return (
     <mesh position={[x - 0.4, y - 0.4, z]}>
-      <textBufferGeometry
+      <textGeometry
         attach="geometry"
         args={[
           number.toString(),
@@ -168,9 +188,10 @@ type BoxProps = {
   modMode: 2 | 4;
 };
 const Box: React.FC<BoxProps> = ({ cube, handleClick, hints, modMode }) => {
+  extend({ BoxLineGeometry });
   const { flips, position } = cube;
   const { x, y, z } = position;
-  const mesh = useRef<THREE.Mesh>();
+  const mesh = useRef<THREE.Mesh>(null);
   const [rotationScale, setRotationScale] = useState(0.01);
 
   const onClick = () => {
@@ -202,11 +223,11 @@ const Box: React.FC<BoxProps> = ({ cube, handleClick, hints, modMode }) => {
       receiveShadow
       castShadow
     >
-      <boxBufferGeometry attach="geometry" args={[1, 1, 1]} />
+      <boxGeometry attach="geometry" args={[1, 1, 1]} />
       <meshLambertMaterial
         attach="material"
         transparent
-        opacity={hints ? 0.5 : 1}
+        opacity={hints ? 0.5 : 0.75}
         refractionRatio={0.2}
         color={materialColor}
         emissive={
@@ -265,9 +286,11 @@ export const ThreeD = () => {
           width: "100vw",
           background: "transparent",
         }}
-        raycaster={{
-          filter: (items) => items.slice(0, 1),
-        }}
+        raycaster={
+          {
+            // filter: (items) => items.slice(0, 1),
+          }
+        }
         camera={{
           position: [10, 10, 10],
           isPerspectiveCamera: true,
@@ -279,13 +302,13 @@ export const ThreeD = () => {
       >
         <ambientLight />
         <Suspense fallback={null}>
-          <StandardEffects
+          {/* <StandardEffects
             bloom={true}
             ao={false}
             edgeDetection={0.1}
             smaa={false}
             bloomOpacity={0.5}
-          />
+          /> */}
           <OrbitControls />
         </Suspense>
         <pointLight position={[5, 5, 5]} />
